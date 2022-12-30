@@ -7,16 +7,16 @@ datasets = ['movies']
 def d_movies(file):
 
     print("Creating user set")
-    user_set = set(list(file["User_Id"]))
 
+    user_set = set(list(file["User_Id"]))
     with open("data/movies_UserSet.txt", "w") as user_set_file:
         for user in user_set:
             user_set_file.write(str(user))
             user_set_file.write("\n")
 
-    print("Creating movie set")
+    print("Creating (movie,year,genre) triples")
+
     tmp_movie_name = list(file["Movie_Name"])
-    
     year = []
     movie_name = []
     movie_year_genre = set()
@@ -30,7 +30,6 @@ def d_movies(file):
         movie_name.append(m)
     
     tmp_genres = list(file["Genre"])
-
     genres = []
     for genre in tmp_genres:
         g = genre.split("|")
@@ -40,6 +39,7 @@ def d_movies(file):
         movie_year_genre.add((str(movie_name[i]), year[i], genres[i]))
 
     print("Creating Database")
+    
     with open("data/movies_Database.csv", "w") as database:
         database.write(",movie,year,genre\n")
 
@@ -60,12 +60,11 @@ def main(args):
 
     dataset_path = "data/" + d + ".csv"
 
-    print("Reading file .csv")
+    print("Reading .csv file")
     file = pd.read_csv(dataset_path, engine = "pyarrow")
 
     if d == 'movies':
         d_movies(file)
-
 
     print("Done")
 
