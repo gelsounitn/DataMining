@@ -54,9 +54,6 @@ def movies():
             else:
                 database.write(str(movie[0]) + "," + movie[1] + "," + str(movie[2]) + "," + str(movie[3]) + "," + d_name_str + "\n")
 
-    print("Creating query set")
-    print("Creating utility matrix")
-
 def music():
 
     print("Creating dataset directory")
@@ -118,9 +115,6 @@ def music():
             else:
                 database.write(str(counter) + "," + track[0] + "," + str(track[1]) + "," + str(track[2]) + "," + artist_str + "," + track[4] + "," + str(track[5]) + "\n")
                 counter += 1
-
-    print("Creating query set")
-    print("Creating utility matrix")
 
 def main(args):
     d = args.d
