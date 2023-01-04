@@ -65,7 +65,6 @@ def music():
 
     id = m.id
     name = m.name
-    popularity = m.popularity
     duration = m.duration_ms
     explicit = m.explicit
     artists = m.artists

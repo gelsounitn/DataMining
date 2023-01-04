@@ -9,7 +9,7 @@ def main(args):
 
     q = args.q
     u = args.u
-    n = 2000
+    mu = 30
  
     if type(q) != type(""):
         raise TypeError("The argument --d is not a string")
@@ -18,16 +18,48 @@ def main(args):
         raise TypeError("The argument --u is not a string")
 
     ###
+    print("Opening user set and query set")
+    with open(u, "r") as user_set, open(q, "r") as query_set, open("utility_matrix.csv", "w") as u_matrix:
+        users = user_set.readlines()
+        queries = query_set.readlines()
 
-    database = pd.read_csv(q, engine = "pyarrow")
-    users = pd.read_csv(u, engine = "pyarrow")
+        print("Creating utility matrix")
+        query_ids = []
+        for i in range(len(queries)):
+            attributes = queries[i].split(",")
 
-    print(users)
-    print("done")
+            if i == len(queries) - 1:
+                u_matrix.write(str(attributes[0]) + "\n")
+            else:
+                u_matrix.write(str(attributes[0]) + ",")
 
+            query_ids.append(attributes[0])
 
+        sigma = round(mu/5)
 
+        for _ in users:
+            randomnumber = min(round(abs(random.normalvariate(mu, sigma))), len(queries))
+            
+            extracted_list = []
+            for _ in range(randomnumber):
+                extracted_list.append(random.randint(0, len(queries)-1))
+            
+            extracted_list.sort()
+            
+            k = 0
+            for j in range(len(query_ids)):
+                if j == extracted_list[k]:
+                    u_matrix.write("," + str(query_ids[j]))
 
+                    if k < len(extracted_list) - 1:
+                        k += 1
+
+                else:
+                    u_matrix.write(",")
+            
+            u_matrix.write("\n")
+
+    print("Done")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
