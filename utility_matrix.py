@@ -49,7 +49,7 @@ def main(args):
             k = 0
             for j in range(len(query_ids)):
                 if j == extracted_list[k]:
-                    u_matrix.write("," + str(query_ids[j]))
+                    u_matrix.write("," + str(random.randint(1, 100)))
 
                     if k < len(extracted_list) - 1:
                         k += 1
