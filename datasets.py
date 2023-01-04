@@ -4,7 +4,7 @@ import random
 import ast
 import os
 
-datasets = ['movies', 'music']
+datasets = ['movies', 'music', 'soccer']
 
 def movies():
 
@@ -115,6 +115,30 @@ def music():
                 database.write(str(counter) + "," + track[0] + "," + str(track[1]) + "," + str(track[2]) + "," + artist_str + "," + track[4] + "," + str(track[5]) + "\n")
                 counter += 1
 
+def soccer():
+
+    print("Creating dataset directory")
+    if not os.path.exists("data/soccer"):
+        os.mkdir("data/soccer")
+
+    print("Opening .csv file")
+    s = pd.read_csv("data/soccer/database.csv", engine = "pyarrow")
+
+    id = s.id
+
+    print("Creating user set")
+    user_set = []
+
+    for i in range(len(id)):
+        user_set.append(i)
+
+    with open("data/soccer/user_set.txt", "w") as file:
+        for user in user_set:
+            file.write(str(user))
+            file.write("\n")
+
+    print("Creating database")
+
 def main(args):
     d = args.d
 
@@ -128,6 +152,8 @@ def main(args):
         movies()
     elif d == 'music':
         music()
+    elif d == 'soccer':
+        soccer()
 
     print("Done")
 
