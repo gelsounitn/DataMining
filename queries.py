@@ -2,6 +2,8 @@ import pandas as pd
 import argparse
 import random
 
+from datasets import datasets
+
 # use --d to specify path/file.csv of the database
 # use --n to specify number of queries you want in return (default = 2000)
 # note that different queries might be equevalent and have attributes in different orders
@@ -16,25 +18,30 @@ def main(args):
  
     if type(d) != type(""):
         raise TypeError("The argument --d is not a string")
+    elif d not in datasets:
+        print("Select one dataset among {}".format(datasets))
+        exit(1)
 
     ###
-    with open("query_set.csv", "w") as file:
+    print("Creating query set")
+    q_path = "data/" + d + "/query_set.csv"
+    with open(q_path, "w") as file:
 
-        database = pd.read_csv(d, engine = "pyarrow")
+        database_path = "data/" + d + "/database.csv"
+        database = pd.read_csv(database_path, engine = "pyarrow")
 
         attributes = list(database)
-        print("Database rows: " + str(len(database.index)))
-        print("Attributes: " + str(attributes))
-        #print( "n = " + str(n))
+        print("- Database rows: " + str(len(database.index)))
+        print("- Attributes: " + str(attributes))
 
         extracted_list = []
         i = 0
         for i in range(n):
-            #print("i = " + str(i))
+
             r = random.randint(1, len(database.index)-1)
-            #print("r = " + str(r))
             extracted_list.append(r)
             na = random.randint(1, len(attributes)-1)
+
             attribute_set = set()
             for a in range(na):
                 attribute_set.add(attributes[random.randint(1, len(attributes)-1)])
@@ -46,7 +53,7 @@ def main(args):
             query += "\n"
             file.write(query)
 
-        print("Done")
+    print("Done")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -1,4 +1,3 @@
-import pandas as pd
 import argparse
 import random
 
@@ -53,7 +52,6 @@ def main(args):
 
                     if k < len(extracted_list) - 1:
                         k += 1
-
                 else:
                     u_matrix.write(",")
             
