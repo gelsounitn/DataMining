@@ -1,3 +1,2 @@
-dataset,n_utenti,n_query
-movies,451757,3000000      -> 6 query per utente
-music,586672,100000       -> 0.2 query per utente
+n_utenti = 12000
+n_query = 8000

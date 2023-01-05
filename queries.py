@@ -55,9 +55,9 @@ def main(args):
 
     print("Done")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--d', type = str, required = True)     #remember to write a path/file as argument
-    parser.add_argument('--n', type = int, required = False)    #the number of queries you want to generate
+    parser.add_argument("--d", type = str, required = True)     #remember to write the name as argument
+    parser.add_argument("--n", type = int, required = False)    #the number of queries you want to generate
 
     main(args = parser.parse_args())

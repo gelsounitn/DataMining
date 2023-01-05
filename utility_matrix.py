@@ -8,7 +8,7 @@ def main(args):
 
     q = args.q
     u = args.u
-    mu = 30
+    mu = 500
  
     if type(q) != type(""):
         raise TypeError("The argument --d is not a string")
@@ -18,7 +18,11 @@ def main(args):
 
     ###
     print("Opening user set and query set")
-    with open(u, "r") as user_set, open(q, "r") as query_set, open("utility_matrix.csv", "w") as u_matrix:
+    path_list = u.split("/")
+    d = path_list[1]
+    u_path = "data/" + d + "/utility_matrix.csv"
+
+    with open(u, "r") as user_set, open(q, "r") as query_set, open(u_path, "w") as u_matrix:
         users = user_set.readlines()
         queries = query_set.readlines()
 
@@ -34,33 +38,39 @@ def main(args):
 
             query_ids.append(attributes[0])
 
-        sigma = round(mu/5)
+        sigma = round(mu/50)
 
-        for _ in users:
+        for user in users:
+            user = user[:-1]
+            s = user + ","
+
             randomnumber = min(round(abs(random.normalvariate(mu, sigma))), len(queries))
             
             extracted_list = []
-            for _ in range(randomnumber):
-                extracted_list.append(random.randint(0, len(queries)-1))
+            extracted_set = set()
+            while len(extracted_set) != randomnumber:
+                extracted_set.add(random.randint(0, len(queries)-1))
             
+            extracted_list = list(extracted_set)
             extracted_list.sort()
             
+
             k = 0
             for j in range(len(query_ids)):
                 if j == extracted_list[k]:
-                    u_matrix.write("," + str(random.randint(1, 100)))
+                    s += "," + str(random.randint(1, 100))
 
                     if k < len(extracted_list) - 1:
                         k += 1
                 else:
-                    u_matrix.write(",")
+                    s += ","
             
-            u_matrix.write("\n")
+            u_matrix.write(s + "\n")
 
     print("Done")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--q', type = str, required = True)     #the path/file with the queries
-    parser.add_argument('--u', type = str, required = True)     #the path/file with the user list
+    parser.add_argument("--q", type = str, required = True)     #the path/file with the queries
+    parser.add_argument("--u", type = str, required = True)     #the path/file with the user list
     main(args = parser.parse_args())

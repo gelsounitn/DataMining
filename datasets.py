@@ -1,14 +1,16 @@
+from faker import Faker
 import pandas as pd
 import argparse
 import random
 import ast
 import os
 
-datasets = ['movies', 'music', 'soccer']
+datasets = ['movies', 'music', 'soccer', 'social']
+userNumber = 10000
 
 def movies():
 
-    print("Creating dataset directory")
+    print("Creating dataset directory (if does not exist)")
     if not os.path.exists("data/movies"):
         os.mkdir("data/movies")
 
@@ -23,10 +25,10 @@ def movies():
     dir_name = m.director_name
 
     print("Creating user set")
-    user_set = set(u.user_id)
+    user_set = list(set(u.user_id))
     with open("data/movies/user_set.txt", "w") as file:
-        for user in user_set:
-            file.write(str(user))
+        for i in range(userNumber):
+            file.write("u_" + str(user_set[i]))
             file.write("\n")
 
     print("Creating database")
@@ -53,10 +55,12 @@ def movies():
                 pass
             else:
                 database.write(str(movie[0]) + "," + movie[1] + "," + str(movie[2]) + "," + str(movie[3]) + "," + d_name_str + "\n")
+    
+    check_csv_file("data/movies/database.csv")
 
 def music():
 
-    print("Creating dataset directory")
+    print("Creating dataset directory (if does not exist)")
     if not os.path.exists("data/music"):
         os.mkdir("data/music")
 
@@ -74,13 +78,13 @@ def music():
     print("Creating user set")
     user_set = []
 
-    for i in range(len(id)):
+    for i in range(userNumber):
         user_set.append(i)
     random.shuffle(user_set)
 
     with open("data/music/user_set.txt", "w") as file:
         for user in user_set:
-            file.write(str(user))
+            file.write("u_" + str(user))
             file.write("\n")
 
     print("Creating database")
@@ -114,33 +118,95 @@ def music():
             else:
                 database.write(str(counter) + "," + track[0] + "," + str(track[1]) + "," + str(track[2]) + "," + artist_str + "," + track[4] + "," + str(track[5]) + "\n")
                 counter += 1
+    
+    check_csv_file("data/music/database.csv")
 
 def soccer():
 
-    print("Creating dataset directory")
+    print("Creating dataset directory (if does not exist)")
     if not os.path.exists("data/soccer"):
         os.mkdir("data/soccer")
 
     print("Opening .csv file")
-    s = pd.read_csv("data/soccer/database.csv", engine = "pyarrow")
-
-    id = s.id
-
     print("Creating user set")
     user_set = []
 
-    for i in range(len(id)):
-        user_set.append(i)
+    for i in range(userNumber):
+        user_set.append("u_" + str(i))
 
     with open("data/soccer/user_set.txt", "w") as file:
         for user in user_set:
             file.write(str(user))
             file.write("\n")
 
+    check_csv_file("data/soccer/database.csv")
+
+def social_media():
+
+    print("Creating dataset directory (if does not exist)")
+    if not os.path.exists("data/social"):
+        os.mkdir("data/social")
+
+    #columns = ["id", "user_name", "email" ,"age", "gender", "location", "n_followers", "n_following", "n_post", "language", "occupation"]
+
+    print("Creating user set")
+    with open("data/social/user_set.txt", "w") as file:
+        for i in range(userNumber):
+            file.write("u_" + str(i))
+            file.write("\n")
+
+    fake = Faker()
+
+    print("Generating data")
+    profile_info = set()
+
+    for i in range(100000):
+        id = i
+        gender = random.choices(population = ["M", "F", "O"], weights = [0.45, 0.45, 0.10])[0]
+
+        first_name = fake.first_name_male() if gender == "M" else fake.first_name_female() if gender == "F" else fake.first_name_nonbinary()
+        last_name = fake.last_name_male() if gender == "M" else fake.last_name_female() if gender == "F" else fake.last_name_nonbinary()
+        user_name = first_name + " " + last_name
+
+        email = first_name + "." + last_name + "@" + fake.domain_name()
+        age = random.choice(range(18, 65))
+        location = fake.city()
+        n_follower = max(round(random.normalvariate(1000, 3000)), 0)
+        n_following = max(round(random.normalvariate(2000, 3000)), 0)
+        n_post = random.randint(0,1000)
+
+        language = fake.language_name()
+        while "," in language:
+            language = fake.language_name()
+        
+        occupation = fake.job()
+        while "," in occupation:
+            occupation = fake.job()
+
+        profile_info.add((id, user_name, email, age, gender, location, n_follower, n_following, n_post, language, occupation))
+
     print("Creating database")
+    with open("data/social/database.csv", "w") as database:
+        database.write("id,user_name,email,age,gender,location,n_followers,n_following,n_post,language,occupation\n")
+
+        for profile in profile_info:
+            database.write(str(profile[0]) + "," + profile[1] + "," + profile[2] + "," + str(profile[3]) + "," + profile[4] + "," + profile[5] + "," + str(profile[6]) + "," + str(profile[7]) + "," + str(profile[8]) + "," + profile[9] + "," + profile[10] + "\n")
+
+    check_csv_file("data/social/database.csv")
+
+def check_csv_file(path):
+    try:
+        pd.read_csv(path, engine = "pyarrow")
+    except:
+        print("Malformed csv file")
+        exit(1)
+
+    print("Csv file OK")
 
 def main(args):
     d = args.d
+    global userNumber
+    userNumber = args.u
 
     if type(d) != type(""):
         raise TypeError("The argument --d is not a string")
@@ -148,17 +214,20 @@ def main(args):
         print("Select one dataset among {}".format(datasets))
         exit(1)
 
-    if d == 'movies':
+    if d == "movies":
         movies()
-    elif d == 'music':
+    elif d == "music":
         music()
-    elif d == 'soccer':
+    elif d == "soccer":
         soccer()
+    elif d == "social":
+        social_media()
 
     print("Done")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--d', type = str, required = True)
+    parser.add_argument("--d", type = str, required = True)
+    parser.add_argument("--u", type = int, required = False)
 
     main(args = parser.parse_args())
