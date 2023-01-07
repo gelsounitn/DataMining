@@ -1,0 +1,4 @@
+list of python modules to install before running the code:
+- argparse
+- faker
+- pandas

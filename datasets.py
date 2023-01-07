@@ -5,9 +5,10 @@ import random
 import ast
 import os
 
-datasets = ['movies', 'music', 'soccer', 'social']
-userNumber = 10000
+datasets = ["movies", "music", "soccer", "social", "products"]
+userNumber = 12000
 
+# function for the "movies" dataset
 def movies():
 
     print("Creating dataset directory (if does not exist)")
@@ -41,6 +42,8 @@ def movies():
         database.write("id,title,year,popularity,director_name\n")
 
         for movie in movie_info:
+
+            # creating a list of director names separated by ;
             directors_name = list(movie[4].split(","))
 
             d_name_str = "["
@@ -50,6 +53,7 @@ def movies():
             d_name_str = d_name_str[:-1]
             d_name_str += "]"
 
+            # if the movie name contains a "," it is not included in the database
             t = movie[1]
             if "," in t:
                 pass
@@ -58,6 +62,7 @@ def movies():
     
     check_csv_file("data/movies/database.csv")
 
+# function for the "music" dataset
 def music():
 
     print("Creating dataset directory (if does not exist)")
@@ -99,6 +104,8 @@ def music():
 
         counter = 1
         for track in track_info:
+
+            # creating a list of artist names separated by ;
             artist = list(track[3])
 
             artist_str = "["
@@ -112,6 +119,7 @@ def music():
             artist_str = artist_str[:-1]
             artist_str += "]"
 
+            # if the artist name contains a "," it is not included in the database
             name = track[0]
             if "," in name:
                 pass
@@ -121,6 +129,7 @@ def music():
     
     check_csv_file("data/music/database.csv")
 
+# function for the "soccer" dataset
 def soccer():
 
     print("Creating dataset directory (if does not exist)")
@@ -141,13 +150,15 @@ def soccer():
 
     check_csv_file("data/soccer/database.csv")
 
+# function for the "social" dataset
 def social_media():
 
     print("Creating dataset directory (if does not exist)")
     if not os.path.exists("data/social"):
         os.mkdir("data/social")
 
-    #columns = ["id", "user_name", "email" ,"age", "gender", "location", "n_followers", "n_following", "n_post", "language", "occupation"]
+    # columns in the database
+    # id, user_name, email, age, gender, location, n_followers, n_following, n_post, language, occupation
 
     print("Creating user set")
     with open("data/social/user_set.txt", "w") as file:
@@ -194,34 +205,91 @@ def social_media():
 
     check_csv_file("data/social/database.csv")
 
+# function for the "products" dataset
+def products():
+    print("Creating dataset directory (if does not exist)")
+    if not os.path.exists("data/products"):
+        os.mkdir("data/products")
+
+    # columns in the database
+    # product_id, time_stamp, quantity, price, payment_method, delivery_address, delivery_status, product_name, product_category, carrier
+
+    print("Creating user set")
+    with open("data/products/user_set.txt", "w") as file:
+        for i in range(userNumber):
+            file.write("u_" + str(i))
+            file.write("\n")
+
+    fake = Faker(["it_IT"])
+
+    print("Generating data")
+    products_info = set()
+
+    # Get products name
+    products_name = []
+    with open("data/products/products_name.txt", "r") as p_n:
+        products_name = p_n.readlines()
+
+    for i in range(100000):
+        product_id = i
+        time_stamp = fake.date_time()
+        quantity = random.randint(1, 50)
+        price = str(round(random.uniform(0.01, 10000.0)*100)/100) + "$"
+        payment_method = random.choices(population = ["Credit card", "Debit card", "PayPal", "Apple Pay", "Google Pay", "Amazon Pay", "Bank transfer", "Cash on delivery", "Check", "Gift card/voucher"], weights = [0.14, 0.14, 0.14, 0.14, 0.14, 0.06, 0.06, 0.06, 0.06, 0.06])[0]
+
+        delivery_address = fake.address()
+        delivery_address = delivery_address.replace(",", "")
+        delivery_address = delivery_address.replace("\n", " ")
+
+        delivery_status = random.choices(population = ["Pending", "Shipped", "Delivered", "Returned", "Cancelled"], weights = [0.25, 0.25, 0.25, 0.125, 0.125])[0]
+        
+        product_name = random.choice(products_name)
+        product_name = product_name.replace("\n", "")
+
+        carrier = random.choices(population = ["USPS", "UPS", "FedEx", "DHL", "TNT", "ARAMEX", "Purolator", "Canada Post", "Royal Mail", "Japan Post"], weights = [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10])[0]
+
+        products_info.add((product_id, time_stamp, quantity, price, payment_method, delivery_address, delivery_status, product_name, carrier))
+
+    print("Creating database")
+    with open("data/products/database.csv", "w") as database:
+        database.write("product_id,time_stamp,quantity,price,payment_method,delivery_address,delivery_status,product_name,carrier\n")
+
+        for product in products_info:
+            database.write(str(product[0]) + "," + str(product[1]) + "," + str(product[2]) + "," + product[3] + "," + product[4] + "," + product[5] + "," + product[6] + "," + product[7] + "," + product[8] + "\n")
+
+    check_csv_file("data/products/database.csv")
+
 def check_csv_file(path):
     try:
         pd.read_csv(path, engine = "pyarrow")
-    except:
+    except Exception as e:
+        print(e)
         print("Malformed csv file")
         exit(1)
 
     print("Csv file OK")
 
 def main(args):
-    d = args.d
+    dataset = args.d
     global userNumber
     userNumber = args.u
 
-    if type(d) != type(""):
+    if type(dataset) != type(""):
         raise TypeError("The argument --d is not a string")
-    elif d not in datasets:
+    elif dataset not in datasets:
         print("Select one dataset among {}".format(datasets))
         exit(1)
 
-    if d == "movies":
+    if dataset == "movies":
         movies()
-    elif d == "music":
+    elif dataset == "music":
         music()
-    elif d == "soccer":
+    elif dataset == "soccer":
         soccer()
-    elif d == "social":
+    elif dataset == "social":
         social_media()
+    elif dataset == "products":
+        products()
 
     print("Done")
 

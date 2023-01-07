@@ -8,7 +8,7 @@ def main(args):
 
     q = args.q
     u = args.u
-    mu = 500
+    mu = 500 #200
  
     if type(q) != type(""):
         raise TypeError("The argument --d is not a string")
@@ -38,7 +38,7 @@ def main(args):
 
             query_ids.append(attributes[0])
 
-        sigma = round(mu/50)
+        sigma = round(mu/50) #/10
 
         for user in users:
             user = user[:-1]
