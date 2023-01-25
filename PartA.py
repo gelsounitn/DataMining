@@ -1,55 +1,85 @@
+from sklearn.neighbors import NearestNeighbors
+import pandas as pd
 import numpy as np
+import fileinput
 import argparse
 import os
 
 np.set_printoptions(threshold = np.inf)
 
+def GetList(line):
+
+    line_list = line.split(",")
+
+    last_element = line_list.pop()
+    last_element = last_element.replace('\n', '')
+
+    line_list.append(last_element)
+
+    return line_list
+
+def ModifyRatings(tmp):
+
+    line_list = []
+
+    for rating in tmp:
+        if rating == '':
+            line_list.append(-1)
+        else:
+            line_list.append(int(rating))
+
+    return line_list
+
 def main(args):
     path_folder = args.d
 
+    # checking input
     if type(path_folder) != type(""):
         raise TypeError("The argument --d is not a string")
     elif not os.path.exists(path_folder):
         print("Missing folder")
         exit(1)
 
+    # changing working directory
     os.chdir(path_folder)
 
-    try:
-        database = open("database.csv", "r")
-        query_set = open("query_set.csv", "r")
-        user_set = open("user_set.txt", "r")
-        utility_matrix = open("utility_matrix.csv", "r")
-    except Exception as e:
-        print(e)
-
-    utility_matrix_lines = utility_matrix.readlines()
-
-    matrix_query_ids = utility_matrix_lines[0].split(",")
-    matrix_query_ids[-1] = matrix_query_ids[-1].replace("\n", "")
-
-    # utility matrix
-    rating_matrix = np.empty((len(utility_matrix_lines) - 1, len(matrix_query_ids)))
-
+    matrix_query_ids = []
     matrix_user_ids = []
-    for i in range(1,len(utility_matrix_lines)):
-        line = utility_matrix_lines[i]
-        line_list = line.split(",")
-        line_list[-1] = line_list[-1].replace("\n", "")
+    user_rating_matrix = []
 
-        # da sistemare
-        # line_list = ["-1" if x == '' else x for x in line_list]
-        # line_list = [int(x) for x in line_list[1:]]
+    index = 0
+    # reading utility matrix
+    for line in fileinput.input(['utility_matrix.csv']):
 
-        matrix_user_ids.append(line_list[0])
+        line_list = GetList(line)
+        if index == 0:
+            matrix_query_ids = line_list
+        else:
+            matrix_user_ids.append(line_list[0])
+            line_list = ModifyRatings(line_list[1:])
+            user_rating_matrix.append(line_list)
 
-        #np_rating_line = np.array(line_list[1:])
-        rating_matrix[i-1,:] = line_list[1:]
+        index += 1
 
-    database.close()
-    query_set.close()
-    user_set.close()
-    utility_matrix.close()
+    #user_rating_matrix = np.array(user_rating_matrix)
+    user_rating_matrix = pd.DataFrame(user_rating_matrix, columns = matrix_query_ids)
+
+    # test n. 1 (cosine similarity)
+    knn = NearestNeighbors(metric = 'cosine')
+    knn.fit(user_rating_matrix.values)
+    distances, indices = knn.kneighbors(user_rating_matrix.values, n_neighbors = 10)
+
+    for i in range(5):
+
+        sim_queries = indices[i].tolist()
+        query_distances = distances[i].tolist()
+
+        id_query = sim_queries.index(i)
+        #sim_queries.remove(id_query)
+        #query_distances.pop(id_query)
+
+        print(sim_queries)
+        print(query_distances)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
