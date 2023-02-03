@@ -1,2 +1,16 @@
 n_utenti = 12000
 n_query = 8000
+
+
+UV
+Learning rate - mse
+
+0.001 - 3276462 to 2696167 in 28 min
+0.1 - 3258365 to 603674 in 3 min 24 s
+1 - 3269809 to 307 in 3 min 15 s
+8 - 3268141 to 56 in 2 min 45 s
+10 - 3274604 to 56 in 2 min 44 s
+12 - 3275560 to 56 in 3 min 5 s
+15 - 3281027 to 57 in 2 min 47 s
+20 - 3276842 to 57 in 3 min 15 s
+25 - 3272270 to 58 in 2 min 45 s
