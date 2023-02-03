@@ -12,17 +12,23 @@ import tensorflow as tf
 
 np.set_printoptions(threshold = np.inf)
 
-def early_stopping(losses, patience = 5):
+def early_stopping(losses, patience = 3):
      
     if len(losses) <= patience + 1:
         return False
      
     avg_loss = np.mean(losses[-1 - patience:-1])
-     
-    if avg_loss - losses[-1] < 0.01*avg_loss:
+
+    if avg_loss - losses[-1] < 0.1 * avg_loss:
         return True
      
     return False
+
+def isNotNan(x):
+    if(pd.isna(x)):
+        return 0.
+    else:
+        return 1.
 
 def main(args):
     path_folder = args.d
@@ -49,6 +55,8 @@ def main(args):
     print("Normalizing utility matrix")
     user_ratings_mean = df.mean(axis = 0)
     df = df.sub(user_ratings_mean, axis = 1)
+    df_copy = df.copy()
+
     df = df.fillna(0)
     #user_ratings_mean = user_ratings_mean.fillna(0)
 
@@ -57,22 +65,36 @@ def main(args):
     #U = tf.random.normal((500,500), mean=0, stddev=16, dtype = 'float32')
     #V = tf.random.normal((500,500), mean=0, stddev=16, dtype = 'float32')
     
+    #print(df.head())
+
     M = tf.convert_to_tensor(df, dtype=tf.float32)
 
     #harm = np.array([1/(i + 1) for i in range(500) ])
     #plt.plot(harm)
     #plt.show()
 
-    sparsity_mat = tf.cast(tf.not_equal(M, np.nan), dtype = 'float32')
+    #print(M[2])
+    #print(type(M[2][0]))
+    #print(tf.not_equal(M, np.nan)[2])
+
+    df_copy = df_copy.applymap(isNotNan)
+    #print(df_copy.head())
+
+    sparsity_mat = tf.convert_to_tensor(df_copy, dtype=tf.float32)
+    #sparsity_mat = tf.cast(tf.map_fn(isNotNan, M), dtype = 'float32')
     masked_entries = tf.cast(tf.not_equal(sparsity_mat, 1), dtype = 'float32')
+
+    df_copy = None
+    #print(sparsity_mat[2])
+    #print(masked_entries[2])
 
     U_d = tf.Variable(tf.random.normal((12000, 50), mean=0, stddev=16))
     V_d = tf.Variable(tf.random.normal((50, 8001), mean=0, stddev=16))
 
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-    initial_learning_rate=10.,
+    initial_learning_rate=30.,
     decay_steps=100.,
-    decay_rate=0.9,
+    decay_rate=0.95,
     staircase=False
     )
 
@@ -86,7 +108,9 @@ def main(args):
     val_losses = []
     
     train_norm = tf.reduce_sum(sparsity_mat)
+    #print("train_norm ", train_norm)
     val_norm = tf.reduce_sum(masked_entries)
+    #print("val_norm", val_norm)
     
     while True:
         
@@ -94,6 +118,7 @@ def main(args):
             M_app = U_d @ V_d
             
             pred_errors_squared = tf.square(M - M_app)
+            #print("pred_errors_squared", pred_errors_squared[0])
             loss = tf.reduce_sum((sparsity_mat * pred_errors_squared)/train_norm)
             
         val_loss = tf.reduce_sum((masked_entries * pred_errors_squared)/val_norm)
@@ -102,7 +127,9 @@ def main(args):
             print(datetime.now() - start_time, loss, val_loss, ep)
             losses.append(loss.numpy())
             val_losses.append(val_loss.numpy())
-        if early_stopping(val_losses):
+            #print(losses)
+            #print(val_losses)
+        if early_stopping(losses): #val_losses
             break
         
         grads = tape.gradient(loss, [U_d, V_d])
@@ -112,7 +139,10 @@ def main(args):
     
     print('total time: ', datetime.now() - start_time)
     print('epochs: ', ep)
-    print('learning rate now: ', lr_schedule)
+
+    final_matrix = tf.cast(U_d @ V_d, dtype=tf.int32)
+    print(final_matrix[0])  
+
 
         
 
