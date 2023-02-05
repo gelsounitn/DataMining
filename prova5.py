@@ -19,7 +19,7 @@ def early_stopping(losses, patience = 3):
      
     avg_loss = np.mean(losses[-1 - patience:-1])
 
-    if avg_loss - losses[-1] < 0.1 * avg_loss:
+    if avg_loss - losses[-1] < 0.01 * avg_loss or losses[-1] < 0.001 :
         return True
      
     return False
@@ -88,13 +88,13 @@ def main(args):
     #print(sparsity_mat[2])
     #print(masked_entries[2])
 
-    U_d = tf.Variable(tf.random.normal((12000, 50), mean=0, stddev=16))
-    V_d = tf.Variable(tf.random.normal((50, 8001), mean=0, stddev=16))
+    U_d = tf.Variable(tf.random.normal((12000, 800), mean=0, stddev=1))
+    V_d = tf.Variable(tf.random.normal((800, 8001), mean=0, stddev=1))
 
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-    initial_learning_rate=30.,
+    initial_learning_rate=.4,
     decay_steps=100.,
-    decay_rate=0.95,
+    decay_rate=0.96,
     staircase=False
     )
 
@@ -106,12 +106,16 @@ def main(args):
     
     losses = []
     val_losses = []
+    weighted_losses = []
+    weight = 0.2
     
     train_norm = tf.reduce_sum(sparsity_mat)
     #print("train_norm ", train_norm)
     val_norm = tf.reduce_sum(masked_entries)
     #print("val_norm", val_norm)
     
+    #print((U_d @ V_d)[0])
+
     while True:
         
         with tf.GradientTape() as tape:
@@ -121,18 +125,22 @@ def main(args):
             #print("pred_errors_squared", pred_errors_squared[0])
             loss = tf.reduce_sum((sparsity_mat * pred_errors_squared)/train_norm)
             
-        val_loss = tf.reduce_sum((masked_entries * pred_errors_squared)/val_norm)
+            val_loss = tf.reduce_sum((masked_entries * pred_errors_squared)/val_norm)
+
+            weighted_loss = loss + weight * val_loss
     
-        if ep%100 == 0:
-            print(datetime.now() - start_time, loss, val_loss, ep)
+        if ep%10 == 0:
+            print(datetime.now() - start_time, loss, val_loss, weighted_loss, ep)
             losses.append(loss.numpy())
             val_losses.append(val_loss.numpy())
+            weighted_losses.append(weighted_loss.numpy())
+            print((U_d @ V_d)[0][3])
             #print(losses)
             #print(val_losses)
-        if early_stopping(losses): #val_losses
+        if early_stopping(weighted_losses): #val_losses
             break
         
-        grads = tape.gradient(loss, [U_d, V_d])
+        grads = tape.gradient(weighted_loss, [U_d, V_d])
         adam_opt.apply_gradients(zip(grads, [U_d, V_d]))
     
         ep += 1
@@ -141,7 +149,8 @@ def main(args):
     print('epochs: ', ep)
 
     final_matrix = tf.cast(U_d @ V_d, dtype=tf.int32)
-    print(final_matrix[0])  
+    print(df.head())
+    print(final_matrix[0])
 
 
         
