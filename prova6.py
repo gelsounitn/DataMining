@@ -1,9 +1,16 @@
+import scipy
+from scipy import linalg
+from scipy import sparse
+import dask.array as da
 import pandas as pd
 import numpy as np
 import argparse
 import os
+import scipy.sparse
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import math
+import multiprocessing as mp
 
 np.set_printoptions(threshold = np.inf)
 
@@ -24,6 +31,45 @@ def isNotNan(x):
         return 0.
     else:
         return 1.
+
+def WALS(R, M, K, weights=None, iterations=10, lambda_reg=0.1):
+    """
+    Weighted Alternating Least Squares (WALS) algorithm for matrix factorization.
+    
+    Parameters:
+    R (array-like): The input matrix to factorize.
+    M (int): Number of rows in R.
+    K (int): Number of columns in R.
+    weights (array-like, optional): Weights for each element in R. Defaults to None.
+    iterations (int, optional): Number of iterations for WALS. Defaults to 10.
+    lambda_reg (float, optional): Regularization factor for WALS. Defaults to 0.1.
+    
+    Returns:
+    tuple: Two matrices U and V such that R ≈ UV'
+    """
+    if weights is None:
+        weights = np.ones((M, K))
+    
+    U = np.random.rand(M, K)
+    V = np.random.rand(K, K)
+    
+    for i in range(iterations):
+        for j in range(M):
+            W = np.diag(weights[j, :])
+            rows = np.nonzero(R[j, :])[0]
+            if len(rows) == 0:
+                continue
+            U[j, :] = np.linalg.solve(np.dot(V[:, rows].T, np.dot(W, V[:, rows])) + lambda_reg * np.eye(K),
+                                      np.dot(V[:, rows].T, np.dot(W, R[j, rows].T))).T
+        for j in range(K):
+            W = np.diag(np.array([weights[i, j] for i in np.nonzero(R[:, j])[0]]))
+            cols = np.nonzero(R[:, j])[0]
+            if len(cols) == 0:
+                continue
+            V[:, j] = np.linalg.solve(np.dot(U[cols, :].T, np.dot(W, U[cols, :])) + lambda_reg * np.eye(K),
+                                      np.dot(U[cols, :].T, np.dot(W, R[cols, j])))
+    
+    return U, V
 
 def main(args):
     path_folder = args.d
@@ -56,6 +102,14 @@ def main(args):
     df_copy = df.copy()
 
     df = df.fillna(0)
+    #user_ratings_mean = user_ratings_mean.fillna(0)
+
+    #matplotlib inline
+ 
+    #U = tf.random.normal((500,500), mean=0, stddev=16, dtype = 'float32')
+    #V = tf.random.normal((500,500), mean=0, stddev=16, dtype = 'float32')
+    
+    #print(df.head())
 
     M = tf.convert_to_tensor(df, dtype=tf.float32)
 
@@ -71,9 +125,18 @@ def main(args):
     #print(df_copy.head())
 
     sparsity_mat = tf.convert_to_tensor(df_copy, dtype=tf.float32)
+    #sparsity_mat = tf.cast(tf.map_fn(isNotNan, M), dtype = 'float32')
     masked_entries = tf.cast(tf.not_equal(sparsity_mat, 1), dtype = 'float32')
 
     df_copy = None
+    #print(sparsity_mat[2])
+    #print(masked_entries[2])
+
+    w_matrix = sparsity_mat + 0.2*masked_entries
+    Uwals, Vwals = WALS(M, n_rows, n_columns, w_matrix, 10, 0.1)
+    print((Uwals @ Vwals)[0])
+
+    exit(1)
 
     U_d = tf.Variable(tf.random.normal((n_rows, uv_dimension), mean=0, stddev=1))
     V_d = tf.Variable(tf.random.normal((uv_dimension, n_columns), mean=0, stddev=1))
@@ -94,12 +157,14 @@ def main(args):
     losses = []
     val_losses = []
     weighted_losses = []
-    weight = 0.25
+    weight = 0.2
     
     train_norm = tf.reduce_sum(sparsity_mat)
     #print("train_norm ", train_norm)
     val_norm = tf.reduce_sum(masked_entries)
     #print("val_norm", val_norm)
+    
+    #print((U_d @ V_d)[0])
 
     while True:
         
