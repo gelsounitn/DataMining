@@ -1,4 +1,4 @@
-from silence_tensorflow import silence_tensorflow
+#from silence_tensorflow import silence_tensorflow
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -7,7 +7,7 @@ import math
 import os
 
 # disabling all messages from tensorflow package
-silence_tensorflow()
+#silence_tensorflow()
 
 def early_stopping(losses, patience = 3):
      
@@ -57,13 +57,13 @@ def main(args):
     # normalization of each matrix column
     # 1 = rows, 0 = columns
     print("Normalizing utility matrix")
-    user_ratings_mean = df.mean(axis = 1)
+    user_ratings_mean = df.mean(axis="columns")
     user_ratings_mean /= 2
-    query_average = df.mean(axis = 0)
+    query_average = df.mean(axis="rows")
     query_average /= 2
 
-    df = df.sub(user_ratings_mean, axis = 0)
-    df = df.sub(query_average, axis = 1)
+    df = df.sub(user_ratings_mean, axis="rows")
+    df = df.sub(query_average, axis="columns")
 
     # filling the nans in the means vectors with 0s
     user_ratings_mean = user_ratings_mean.fillna(0)
@@ -75,6 +75,8 @@ def main(args):
 
     # filling the dataframe nans with 0s
     df = df.fillna(0)
+
+    print("df shape " + str(df.shape))
 
     # making the dataframe a tensor
     M = tf.convert_to_tensor(df, dtype = tf.float32)
@@ -148,8 +150,8 @@ def main(args):
     print('total time: ', datetime.now() - start_time)
     print('epochs: ', ep)
 
-    final_matrix = tf.cast(U_d @ V_d, dtype = tf.int32)
-    final_df = pd.DataFrame(final_matrix)
+    #final_matrix = tf.cast(U_d @ V_d, dtype = tf.int32)
+    final_df = pd.DataFrame(U_d @ V_d, columns=df.columns, index=df.index)
     #final_df = final_df.add(user_ratings_mean, axis = 0)
     #user_ratings_mean = tf.convert_to_tensor(user_ratings_mean, dtype = tf.int32)
     #query_average = tf.convert_to_tensor(query_average, dtype = tf.int32)
@@ -161,12 +163,10 @@ def main(args):
     # for column in final_df.columns:
     #     final_df[column] += query_average
 
-    # print(final_df.index)
 
-    #final_df = final_df.add(user_ratings_mean, axis = 1)
-    #final_df = final_df.add(query_average, axis = 0)
-    #final_df = final_df.add(user_ratings_mean, axis = 1)
-    #final_df = final_df.add(query_average, axis = 1)
+    final_df = final_df.add(user_ratings_mean, axis="rows")
+    final_df = final_df.add(query_average, axis="columns")
+    final_df = final_df.round(0).astype(int)
     print(final_df.head())
 
 # learning rate (anche come decade), latent_factors, peso delle celle vuote, 
