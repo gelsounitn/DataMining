@@ -7,23 +7,22 @@ import math
 
 np.set_printoptions(threshold = np.inf)
 
-def early_stopping(losses, patience = 3):
-     
-    if len(losses) <= patience + 1:
-        return False
-     
-    avg_loss = np.mean(losses[-1 - patience:-1])
 
-    if avg_loss - losses[-1] < 0.01 * avg_loss or losses[-1] < 0.001 :
-        return True
-     
-    return False
+# es query: db.query('year == 2004 and popularity == 0')
+def rowToQuery(row):
+    row = row.replace('\n', '')
+    row = row.replace('=', '=="')
+    row = row.replace(',', '",')
+    row = row.split(',')
+    query = str(row[1])
+    row = row[2:]
+    for u in row:
+        query += ' and '
+        query += str(u)
+    query += '"'
+    return query
 
-def isNotNan(x):
-    if(pd.isna(x)):
-        return 0.
-    else:
-        return 1.
+
 
 def main(args):
     path_folder = args.d
@@ -39,13 +38,46 @@ def main(args):
     os.chdir(path_folder)
 
     # reading file
-    print("Reading utility matrix")
-    df = pd.read_csv("utility_matrix.csv")
-    pd.set_option("display.precision", 10)
+    print("Reading database")
+    db = pd.read_csv("database.csv", dtype="string", index_col="id")
+    print("Reading query list")
+    ql = []
+    with open("query_set.csv", "r") as queryFile:
+        ql = queryFile.readlines()
+
+    #print(db.head())
+
+    signaturesTf = tf.zeros([db.shape[0],len(ql)], tf.dtypes.int8)
+    signatures = pd.DataFrame(signaturesTf)
+    signatures["id"] = db.index
+    signatures.set_index("id")
+
+
+
+    # for each query in query_list
+    for i in range(len(ql)):
+        query = rowToQuery(ql[i])
+        elements = db.query(query)
+        
+        # foreach element returned by the query
+        for index, row in elements.iterrows():
+            id = row.name
+
+            # put ones where elements are found in the column
+            #db.loc[id, i] = 1
+
+        if i%10 == 0:
+            print(i)
+            
+
+    
+
+
+    exit(1)
 
     n_rows = df.shape[0]
     n_columns = df.shape[1]
-    #12000 * 8001 -> 600
+
     uv_dimension = math.ceil((n_rows*n_columns) ** (1/3)) * 2
     print("uv dimension: " + str(uv_dimension))
 

@@ -43,41 +43,40 @@ def main(args):
     df = pd.read_csv("utility_matrix.csv")
     pd.set_option("display.precision", 10)
 
+    # saving matrix dimensions
     n_rows = df.shape[0]
     n_columns = df.shape[1]
-    #12000 * 8001 -> 600
-    uv_dimension = math.ceil((n_rows*n_columns) ** (1/3))
+
+    # choosing u,v dimensions
+    # 12000 * 8001 -> 600
+    uv_dimension = math.ceil((n_rows*n_columns) ** (1/3)) * 2
     print("uv dimension: " + str(uv_dimension))
 
     # normalization of each matrix column
     print("Normalizing utility matrix")
     user_ratings_mean = df.mean(axis = 0)
     df = df.sub(user_ratings_mean, axis = 1)
+
+    # creatin a dataframe with ones where there are nans 
     df_copy = df.copy()
+    df_copy = df_copy.applymap(isNotNan)
 
+    # filling df nans with zeros (mean) and making it a tensor
     df = df.fillna(0)
-
     M = tf.convert_to_tensor(df, dtype=tf.float32)
 
-    #harm = np.array([1/(i + 1) for i in range(500) ])
-    #plt.plot(harm)
-    #plt.show()
-
-    #print(M[2])
-    #print(type(M[2][0]))
-    #print(tf.not_equal(M, np.nan)[2])
-
-    df_copy = df_copy.applymap(isNotNan)
-    #print(df_copy.head())
-
+    # making tensors with infos about filled and empty values
     sparsity_mat = tf.convert_to_tensor(df_copy, dtype=tf.float32)
     masked_entries = tf.cast(tf.not_equal(sparsity_mat, 1), dtype = 'float32')
 
+    # deleting df copy
     df_copy = None
 
+    # initializing U and V matrices
     U_d = tf.Variable(tf.random.normal((n_rows, uv_dimension), mean=0, stddev=1))
     V_d = tf.Variable(tf.random.normal((uv_dimension, n_columns), mean=0, stddev=1))
 
+    # defining a varying learning rate
     lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=.4,
     decay_steps=100.,
@@ -85,6 +84,7 @@ def main(args):
     staircase=False
     )
 
+    # choosing optimizer
     adam_opt = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
     
     from datetime import datetime
@@ -96,22 +96,20 @@ def main(args):
     weighted_losses = []
     weight = 0.25
     
+    # get the number of filled and missing cells
     train_norm = tf.reduce_sum(sparsity_mat)
-    #print("train_norm ", train_norm)
     val_norm = tf.reduce_sum(masked_entries)
-    #print("val_norm", val_norm)
 
+    # performing optimization
     while True:
         
         with tf.GradientTape() as tape:
+
             M_app = U_d @ V_d
             
             pred_errors_squared = tf.square(M - M_app)
-            #print("pred_errors_squared", pred_errors_squared[0])
             loss = tf.reduce_sum((sparsity_mat * pred_errors_squared)/train_norm)
-            
             val_loss = tf.reduce_sum((masked_entries * pred_errors_squared)/val_norm)
-
             weighted_loss = loss + weight * val_loss
     
         if ep%10 == 0:
@@ -120,8 +118,7 @@ def main(args):
             val_losses.append(val_loss.numpy())
             weighted_losses.append(weighted_loss.numpy())
             print((U_d @ V_d)[0][3])
-            #print(losses)
-            #print(val_losses)
+
         if early_stopping(weighted_losses): #val_losses
             break
         
